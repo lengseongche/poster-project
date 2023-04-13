@@ -4,7 +4,7 @@ library(missForest)
 library(stargazer)
 
 ##### 2016 adult data
-person_2016data = read.csv("/Users/lengseongche/Desktop/Research/thesis/2016adults_coded.csv")
+person_2016data = read.csv("2016adults_coded.csv")
 
 # filter out unavailable data
 person_2016data_filtered <- person_2016data %>% filter(qg12 > 0 & qg12 != 'NA' & qn4001 >= 0 & rswt_natcs16!= 'NA' & rswt_natpn1016!= 'NA')
