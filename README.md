@@ -8,7 +8,7 @@ Education is an important factor affecting an individual’s capacity for social
 We aim to investigate the relationship between income and education in China and see how marital status affects this relationship. We utilize the survey data from the 2016 wave of the China Family Panel Studies (CFPS) to investigate mainly the interactive effect of education and marital status on income. The CFPS data can be downloaded via the link below. 
 
 https://opendata.pku.edu.cn/dataverse/CFPS?language=en 
-(One needs to receive the permission for the access of these data)
+(One needs to receive permission for the access to the CFPS data)
 
 
 ### Methods
@@ -26,5 +26,11 @@ Some key takeaways:
 2) Both marital status and education independently increase income amounts. 
 3) Our results suggest that the combination of higher education and marriage predicts higher income in China. This could be because marriage gives an individual access to more social networks and connections, allowing them access to higher paying jobs. Another explanation could be that people with higher socioeconomic status have more access to marriage due to social networks, financial stability, etc. 
 4) A beneficial next step in this research would be qualitative research on how individuals have been able to achieve higher incomes, in order to investigate the pathways through which these relationships are shaped. 
+
+### References
+1) Asadullah, M. N., & Xiao, S. (2020). The changing pattern of wage returns to education in post-reform China. Structural Change and Economic Dynamics, 53, 137–148. 
+2) Cai, W., & Wu, F. (2019). Influence of income disparity on child and adolescent education in China: a literature review. New directions for child and adolescent development, 2019(163), 97-113.
+3) Cairo, A. (2016). The truthful art: Data, charts, and maps for communication. New Riders.
+
 
 
