@@ -1,0 +1,173 @@
+---
+title: "Economic Inequality: Exploring the Joint Impacts of Education and Marriage"
+author: "Leng Seong Che, Eve Kennedy"
+date: "2023-04-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(missForest)
+library(stargazer)
+
+set.seed(123)
+```
+
+This analysis leverages both qualitative and quantitative approaches to investigate the effects of education and marital status on yearly income in China. The cross-sectional data come from the 2016 wave of the China Family Panel Studies (CFPS). The following code will walk you through our analysis.
+
+Firstly, import the 2016 dataset from CFPS. The data and the user manual can be downloaded from Peking University Open Research Data Platform.
+https://opendata.pku.edu.cn/dataverse/CFPS?language=en
+
+```{r}
+# Import data
+person_2016data = read.csv("2016adults_coded.csv")
+
+```
+
+The second step is to filter out unavailable data for income and weights variables. The weights should be included in the regression model for obtaining a national representative sample. After filtering out unavailable data, we create a new dataframe that consists of selected variables for analysis. 
+
+pid - personal id,
+year - year of interview,
+party - party membership (1 = party member, 0 = non-party member),
+gender - gender of interviewee (1 = male, 0 = female),
+age - age of interviewee,
+house_regis - household registration type of interviewee (1 = agricultural type, 0 = non-agricultural type),
+edu - highest educational attainment at the time of interview (1 = Illiterate/Semi-literate, 2 = Primary school, 3= Junior high school, 4 = Senior high school/secondary school/technical school/vocational senior school, 5 = 3-year college, 6 = 4-year college, 7 = Master's degree, 8 = doctoral degree),
+edu_year - year of schooling,
+marital - marital status, 
+urban - urban status,
+cross_weight - cross-sectional weight,
+panel_weight - panel weight, 
+
+Please refer to user manual for more details of these variables
+
+```{r}
+# Filter out unavailable data
+person_2016data_filtered <- person_2016data %>% filter(qg12 > 0 & qg12 != 'NA' & qn4001 >= 0 & rswt_natcs16!= 'NA' & rswt_natpn1016!= 'NA')
+
+# Create new dataframe for selected variables
+filtered.2016 = data.frame(pid = person_2016data_filtered$pid, year = 2016, income = person_2016data_filtered$qg12, 
+                           party = person_2016data_filtered$qn4001, gender = person_2016data_filtered$cfps_gender, 
+                           age = person_2016data_filtered$cfps_age, house_regis = person_2016data_filtered$pa301, 
+                           edu = person_2016data_filtered$cfps2016edu, edu_year = person_2016data_filtered$cfps2016eduy_im,
+                           marital = person_2016data_filtered$qea0, urban = person_2016data_filtered$urban16,
+                           cross_weight = person_2016data_filtered$rswt_natcs16, panel_weight = person_2016data_filtered$rswt_natpn1016)
+```
+
+This dataset is a coded version. Non-applicable data were coded into -9, -8, and -1. Re-coding the non-applicable data into "NA" for imputation afterwards. 
+
+```{r}
+# changing all negative codes to NA
+filtered.2016[filtered.2016 == -9 ] <- NA
+filtered.2016[filtered.2016 == -8] <- NA
+filtered.2016[filtered.2016 == -1] <- NA
+```
+
+The "missForest" package allows users to impute the missing values in a dataset. 
+
+```{r}
+# impute missing data
+filtered.2016 = missForest(filtered.2016,verbose = TRUE)
+filtered.2016 = filtered.2016$ximp
+```
+
+Income, education, household registration type, and urban status are recoded for regression analysis. 
+
+```{r}
+# log income
+filtered.2016$log_income = log(filtered.2016$income)
+# 1 = college, 0 = no college
+filtered.2016$education = ifelse(filtered.2016$edu>=5, 1, 0)
+# 1 = agricultural, 0 = non-agricultural
+filtered.2016$house.regis = ifelse(filtered.2016$house_regis < 3 , 1, 0)
+# 0 = unmarried  1= married
+filtered.2016$marital.status = ifelse(filtered.2016$marital == 2, 1, 0)
+# 1= urban 0 = rural
+filtered.2016$Urban = ifelse(filtered.2016$urban == 1 , 1, 0)
+```
+
+Employment sector can be an important determinant of individual yearly income. Thus, we control for this variable in our regression analysis.
+
+```{r}
+# Add employment sector
+filtered.2016_jobtype = filtered.2016
+filtered.2016_jobtype$jobtype = person_2016data_filtered$qg2
+filtered.2016_jobtype <- filtered.2016_jobtype %>% filter(jobtype != -1 & jobtype != 9)
+
+# jobtype 1 = state/collectively owned, 2 = private, 3 = foreign invested, 4 = other
+filtered.2016_jobtype$sector = ifelse(filtered.2016_jobtype$jobtype< 4, 1, filtered.2016_jobtype$jobtype)
+filtered.2016_jobtype$sector = ifelse(filtered.2016_jobtype$sector == 4, 2, filtered.2016_jobtype$sector)
+filtered.2016_jobtype$sector = ifelse(filtered.2016_jobtype$sector == 5, 3, filtered.2016_jobtype$sector)
+filtered.2016_jobtype$sector = ifelse(filtered.2016_jobtype$sector > 3, 4, filtered.2016_jobtype$sector)
+filtered.2016_jobtype$sector <- factor(filtered.2016_jobtype$sector, c(1,2,3,4), 
+                                     labels=c('state/collectively owned', 'private', 'foreign','other ownership'))
+
+```
+
+```{r}
+# Create regression model
+ols_mod = lm(log(income) ~ education  + marital.status + I(age**2) + gender + house.regis + Urban + sector , 
+                  data = filtered.2016_jobtype, weights = cross_weight)
+summary(ols_mod)
+
+# Uncomment below if you want to make a neat table of the regression results
+# stargazer(job_2016_ols,
+#           title = "Regression Results for Income in 2016", align = F, type = "text", no.space = TRUE, out = "poster_reg.html")
+```
+
+The OLS regression results in the table show that individuals with a college degree, on average, earn 47.7% significantly more than those without a college degree (P-value = 0.01). Also, those who were married at the time of the interview earned 49.5% more than those who were single, divorced, or cohabited. Men, on average, earned 50.7% more than women.  The regression analysis suggests that education, marital status, and being a male all have significant impacts on individual income levels.
+
+Now, we use qualitative approach to investigate the effects of education and marital status through visualizations.  
+
+```{r}
+# change numerical values to characters for variables, making visualization more readable
+filtered.2016_jobtype$marital.status<-factor(filtered.2016_jobtype$marital.status, c(0,1), labels=c('Unmarried', 'Married'))
+filtered.2016_jobtype$education<-factor(filtered.2016_jobtype$education, c(0,1), labels=c('No College', 'College'))
+```
+
+```{r}
+# Creating a boxplot for income distribution 
+boxplot(filtered.2016_jobtype$income, horizontal=TRUE, main="Annual Income Distribution in 2016")
+```
+
+The distribution of the outcome variable, yearly income, shown in this figure suggests that the income distribution of the 2016 sample is right-skewed.  While the mean income is 29892.12 and the majority of the sample has a yearly income lower than 200,000, a small proportion of people have high income representing the outliers. 
+
+```{r}
+# Plot for Age Vs. Income Varying by College Degree for visualizing the education effect
+ggplot(data = filtered.2016_jobtype, aes(x = age, y = log_income, color = education)) +
+  geom_point(alpha = 0.3) + theme_bw() + ggtitle("Age Vs. Income Varying by College Degree") +
+  xlab("Age") + ylab("Log Income")
+```
+
+The figure above shows that the majority of individuals with a college degree are on the high end of the log income values. The graph also shows more individuals of younger ages having college degrees than those of older ages. The graph does see a very slight curve in incomes after the age of 20, showing that typical incomes increase between 20 and 30 and then stay constant throughout the lifetime. 
+
+```{r}
+# Plot for Age Vs. Income Varying by Marital Status for visualizing marriage effect
+ggplot(data = filtered.2016_jobtype, aes(x = age, y = log_income, color = marital.status)) +
+  geom_point(alpha = 0.3) + theme_bw() + ggtitle("Age Vs. Income Varying by Marital Status") +
+  xlab("Age") + ylab("Log Income")
+
+```
+
+The figure aboveshows that the income levels of married and unmarried individuals are mostly similar. Those with relatively higher incomes are around 30 years old. A few low outliers around 0 belong to the unmarried group, while some high outliers are among the married group.
+
+```{r}
+# Plot Age Vs. Income Varying by College Degree for Unmarried and Married Individuals
+ggplot(data = filtered.2016_jobtype, aes(x = age, y = log_income, color = education)) +
+  geom_point(alpha = 0.3) + facet_grid(~ marital.status) + theme_bw() + xlab("Age") + ylab("Log Income") + 
+  ggtitle(str_wrap("Age Vs. Income Varying by College Degree for Unmarried and Married Individuals", width = 55)) 
+```
+
+The visualization of the relationship between age and income in logarithms separately for the unmarried and married population, shown in the figure above, illustrates that in both groups, the vast majority of individuals with a college degree or above earned similarly to those who do not have a college degree. However, some individuals who received a college education have obviously higher incomes than most of the population. 
+
+Our analysis provides some interesting insights into the topic of income and education attainment in China. The individuals with consistently highest incomes tend to be college educated, married individuals. Unmarried, college-educated individuals see more variation in incomes. Marital status, education and gender independently increase income amounts. 
+
+Our results suggest that the combination of higher education and marriage predicts higher income in China. This could be because marriage gives an individual access to more social networks and connections, allowing them access to higher paying jobs. Another explanation could be that people with higher socioeconomic status have more access to marriage due to social networks, financial stability, etc. 
+
+Finally, being a man also increases average income amounts, therefore college-educated, married men tend to have the highest incomes in China. 
+
+A beneficial next step in this research would be qualitative research on how individuals have been able to achieve higher incomes, in order to investigate the pathways through which these relationships are shaped. It would be interesting to further investigate the different experiences men and women in China have in acquiring an education and looking for future jobs. 
+
+
