@@ -132,7 +132,7 @@ filtered.2016_jobtype$education<-factor(filtered.2016_jobtype$education, c(0,1),
 boxplot(filtered.2016_jobtype$income, horizontal=TRUE, main="Annual Income Distribution in 2016")
 ```
 
-The distribution of the outcome variable, yearly income, shown in this figure suggests that the income distribution of the 2016 sample is right-skewed.  While the mean income is 29892.12 and the majority of the sample has a yearly income lower than 200,000, a small proportion of people have high income representing the outliers. 
+The distribution of the outcome variable, yearly income, shown in this figure suggests that the income distribution of the 2016 sample is right-skewed. While the mean income is 29892.12 and the majority of the sample has a yearly income lower than 200,000, a small proportion of people have high income representing the outliers. 
 
 ```{r}
 # Plot for Age Vs. Income Varying by College Degree for visualizing the education effect
